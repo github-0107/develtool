@@ -22,7 +22,7 @@ impl Processor {
         if let Some((mut output, size)) = self.to_xlsx.clone().zip(self.split) {
             self.split_to_xlsx(size, &mut output)?;
         } else if let Some(output) = self.to_xlsx.clone() {
-            if let Some(output) = output.as_os_str().to_str() {
+            if let Some(output) = output.to_str() {
                 self.to_xlsx(output)?;
             }
         } else if let Some(size) = self.split {
@@ -109,8 +109,13 @@ impl Processor {
     // Split the csv file by rows
     fn split_sieze(&self, size: usize, output: &PathBuf) -> Result<()> {
         let mut count = 1;
+        
+        let output = output
+            .to_str()
+            .ok_or(std::io::Error::new(std::io::ErrorKind::Other, "path conversion error"))?;
+        
         let mut writer = csv::WriterBuilder::default()
-            .from_path(format!("{:?}.{}.csv", output, count).as_str())?;
+            .from_path(format!("{}.{}.csv", output, count).as_str())?;
 
         self.csv_reader(|index, header: &StringRecord, record| {
             if index == 0 {
@@ -121,7 +126,7 @@ impl Processor {
                 count += 1;
                 writer.flush()?;
                 writer = csv::WriterBuilder::default()
-                    .from_path(format!("{:?}.{}.csv", output, count).as_str())?;
+                    .from_path(format!("{}.{}.csv", output, count).as_str())?;
                 let head = header.as_byte_record().clone();
                 writer.write_record(&head)?;
             }
